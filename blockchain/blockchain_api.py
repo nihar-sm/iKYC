@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="IntelliKYC Blockchain API",
+    title="iKYC Blockchain API",
     description="REST API for KYC blockchain operations with zero-knowledge proofs",
     version="1.0.0"
 )
@@ -79,7 +79,7 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "IntelliKYC Blockchain API",
+        "service": "iKYC Blockchain API",
         "version": "1.0.0",
         "timestamp": datetime.now().isoformat()
     }
@@ -373,7 +373,7 @@ async def auto_mine_task():
 @app.on_event("startup")
 async def startup_event():
     """Startup event handler"""
-    logger.info("IntelliKYC Blockchain API starting up...")
+    logger.info("iKYC Blockchain API starting up...")
     
     # Load existing blockchain if available
     try:
@@ -392,7 +392,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Shutdown event handler"""
-    logger.info("IntelliKYC Blockchain API shutting down...")
+    logger.info("iKYC Blockchain API shutting down...")
     
     # Save blockchain before shutdown
     try:

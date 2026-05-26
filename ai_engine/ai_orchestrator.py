@@ -1,5 +1,5 @@
 """
-AI Orchestrator for IntelliKYC Document Processing
+AI Orchestrator for iKYC Document Processing
 Coordinates EasyOCR, Groq LLM (text + vision), and image utilities.
 """
 
@@ -323,7 +323,7 @@ class AIDocumentProcessor:
 # Test function for the complete AI pipeline
 def test_ai_pipeline():
     """Test the complete AI document processing pipeline with Simplified Free OCR"""
-    print("🧪 Testing IntelliKYC AI Document Processing Pipeline (Simplified Free OCR Edition)")
+    print("🧪 Testing iKYC AI Document Processing Pipeline (Simplified Free OCR Edition)")
     print("=" * 75)
 
     # Initialize AI processor

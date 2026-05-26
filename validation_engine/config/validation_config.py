@@ -1,5 +1,5 @@
 """
-Configuration settings for IntelliKYC Validation Engine
+Configuration settings for iKYC Validation Engine
 """
 
 class ValidationConfig:

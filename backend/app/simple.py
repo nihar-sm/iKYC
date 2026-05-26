@@ -1,11 +1,11 @@
 from fastapi import FastAPI, UploadFile, File
 import uvicorn
 
-app = FastAPI(title="IntelliKYC API")
+app = FastAPI(title="iKYC API")
 
 @app.get("/")
 def read_root():
-    return {"message": "IntelliKYC API is running"}
+    return {"message": "iKYC API is running"}
 
 @app.get("/health")
 def health():

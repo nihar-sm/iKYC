@@ -4,7 +4,7 @@ import os
 
 class Settings(BaseSettings):
     # Application
-    app_name: str = "IntelliKYC"
+    app_name: str = "iKYC"
     environment: str = "development"
     debug: bool = True
     

@@ -1,7 +1,7 @@
 #!/bin/bash
 # docker-test.sh - Test Docker setup
 
-echo "🧪 Testing IntelliKYC Docker Setup"
+echo "🧪 Testing iKYC Docker Setup"
 echo "=================================="
 
 # Test Redis connection

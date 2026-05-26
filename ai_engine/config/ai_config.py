@@ -1,5 +1,5 @@
 """
-AI Engine Configuration for IntelliKYC
+AI Engine Configuration for iKYC
 Open-source stack: Groq API (LLM + Vision) + EasyOCR + sentence-transformers
 """
 

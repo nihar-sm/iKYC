@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Enhanced configuration
 class Settings:
-    app_name = "IntelliKYC"
+    app_name = "iKYC"
     environment = "development"
     upload_dir = "uploads"
     max_file_size_mb = 10
@@ -71,7 +71,7 @@ class KYCDecisionRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    logger.info("🚀 Starting IntelliKYC API with Enhanced Face Liveness System...")
+    logger.info("🚀 Starting iKYC API with Enhanced Face Liveness System...")
     
     # Create upload directory
     upload_path = Path(settings.upload_dir)
@@ -105,7 +105,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"⚠️ Redis not available: {e}")
     
-    logger.info("🎉 IntelliKYC API ready with Enhanced Face Liveness Pipeline!")
+    logger.info("🎉 iKYC API ready with Enhanced Face Liveness Pipeline!")
     yield
     
     # Shutdown

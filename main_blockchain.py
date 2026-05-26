@@ -1,5 +1,5 @@
 """
-IntelliKYC Blockchain API - Main Application Runner
+iKYC Blockchain API - Main Application Runner
 """
 import sys
 import os
@@ -12,7 +12,7 @@ def main():
     blockchain_dir = Path(__file__).parent / "blockchain"
     sys.path.insert(0, str(blockchain_dir))
     
-    print("🚀 Starting IntelliKYC Blockchain API...")
+    print("🚀 Starting iKYC Blockchain API...")
     print("📊 API Documentation: http://localhost:8001/docs")
     print("🔐 Privacy-preserving KYC system ready!")
     print("=" * 50)

@@ -1,5 +1,5 @@
 """
-IntelliKYC Blockchain Module
+iKYC Blockchain Module
 Privacy-preserving KYC verification system using zero-knowledge proofs
 """
 

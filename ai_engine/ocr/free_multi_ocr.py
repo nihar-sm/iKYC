@@ -1,5 +1,5 @@
 """
-Simplified Free Multi-Engine OCR Processor for IntelliKYC
+Simplified Free Multi-Engine OCR Processor for iKYC
 Uses EasyOCR + OCR.space (both free, no system dependencies!)
 """
 

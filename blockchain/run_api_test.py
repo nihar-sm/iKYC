@@ -4,7 +4,7 @@ import sys
 import os
 
 def run_api_and_test():
-    print("Starting IntelliKYC Blockchain API server...")
+    print("Starting iKYC Blockchain API server...")
     
     # Start API server in background
     api_process = subprocess.Popen([

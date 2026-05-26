@@ -1,7 +1,7 @@
 #!/bin/bash
-# docker-setup.sh - Complete Docker setup for IntelliKYC
+# docker-setup.sh - Complete Docker setup for iKYC
 
-echo "🐳 Setting up IntelliKYC with Docker & Redis"
+echo "🐳 Setting up iKYC with Docker & Redis"
 echo "============================================"
 
 # Create necessary directories

@@ -1,5 +1,5 @@
 """
-Test IntelliKYC with Real Aadhaar Images
+Test iKYC with Real Aadhaar Images
 IMPORTANT: Use only test/sample documents or your own documents for testing
 """
 
@@ -182,7 +182,7 @@ def main():
     tester = RealImageTester()
     
     # Get image file path from user
-    print("🧪 IntelliKYC Real Aadhaar Image Tester")
+    print("🧪 iKYC Real Aadhaar Image Tester")
     print("=" * 50)
     print("⚠️  PRIVACY NOTICE: Only use test/sample documents or your own documents")
     print("⚠️  Do not use other people's real Aadhaar cards for testing")

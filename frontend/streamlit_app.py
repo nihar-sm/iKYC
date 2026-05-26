@@ -1,5 +1,5 @@
 """
-Enhanced IntelliKYC Streamlit Frontend Application with Advanced Face Liveness Integration
+Enhanced iKYC Streamlit Frontend Application with Advanced Face Liveness Integration
 """
 
 import streamlit as st
@@ -21,7 +21,7 @@ from utils.api_client import api_client
 
 # Page config
 st.set_page_config(
-    page_title="IntelliKYC Enhanced",
+    page_title="iKYC Enhanced",
     page_icon="🔐",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -55,7 +55,7 @@ def main():
     init_session_state()
     
     # Enhanced header
-    st.title("🔐 IntelliKYC Enhanced - AI-Powered KYC Verification")
+    st.title("🔐 iKYC Enhanced - AI-Powered KYC Verification")
     st.markdown("Complete KYC pipeline with OCR, AI Fraud Detection, and **Enhanced Multi-Modal Face Liveness**")
     st.markdown("---")
     
@@ -115,7 +115,7 @@ def main():
 
 def show_enhanced_home_page():
     """Enhanced home page with new features"""
-    st.header("🏠 Welcome to IntelliKYC Enhanced")
+    st.header("🏠 Welcome to iKYC Enhanced")
     
     col1, col2 = st.columns(2)
     

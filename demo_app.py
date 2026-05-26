@@ -1,5 +1,5 @@
 """
-IntelliKYC — Self-contained demo for Streamlit Community Cloud.
+iKYC — Self-contained demo for Streamlit Community Cloud.
 No FastAPI, no Redis, no EasyOCR required.
 Stack: Groq Vision (Llama 4 Scout), MediaPipe FaceMesh, SHA-256 blockchain, Streamlit.
 """
@@ -34,7 +34,7 @@ except ImportError:
 # Page config (must be first Streamlit call)
 # ──────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="IntelliKYC Demo",
+    page_title="iKYC Demo",
     page_icon="🔐",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -278,7 +278,7 @@ def _init():
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 def _sidebar():
     with st.sidebar:
-        st.markdown("**IntelliKYC**")
+        st.markdown("**iKYC**")
         st.caption("AI-Powered KYC Verification")
         st.markdown("---")
 
@@ -316,7 +316,7 @@ def _sidebar():
 # ─────────────────────────────────────────────────────────────────────────────
 
 def page_home():
-    st.markdown('<div class="kyc-title">IntelliKYC</div>', unsafe_allow_html=True)
+    st.markdown('<div class="kyc-title">iKYC</div>', unsafe_allow_html=True)
     st.markdown('<p class="kyc-sub">AI-Powered Identity Verification Pipeline</p>', unsafe_allow_html=True)
     st.markdown("---")
 

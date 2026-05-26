@@ -2,7 +2,7 @@ import requests
 import json
 from typing import Dict, Any, Optional
 
-class IntelliKYCClient:
+class iKYCClient:
     def __init__(self, base_url: str = "http://localhost:8000"):
         self.base_url = base_url
 
@@ -302,4 +302,4 @@ class IntelliKYCClient:
             return {"error": f"Health check error: {str(e)}"}
 
 # Global client instance
-api_client = IntelliKYCClient()
+api_client = iKYCClient()

@@ -30,7 +30,7 @@ settings = MockSettings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    logger.info("Starting IntelliKYC API...")
+    logger.info("Starting iKYC API...")
     
     # Create upload directory
     upload_path = Path(settings.upload_dir)
@@ -51,16 +51,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"⚠️ Redis connection failed: {e}")
     
-    logger.info("🚀 IntelliKYC API started successfully")
+    logger.info("🚀 iKYC API started successfully")
     
     yield
     
     # Shutdown
-    logger.info("🛑 Shutting down IntelliKYC API...")
+    logger.info("🛑 Shutting down iKYC API...")
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="IntelliKYC API",
+    title="iKYC API",
     version="1.0.0",
     description="AI-Powered KYC Verification System",
     docs_url="/api/docs",
@@ -80,7 +80,7 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {
-        "message": "🎉 IntelliKYC API is running",
+        "message": "🎉 iKYC API is running",
         "version": "1.0.0",
         "environment": settings.environment,
         "docs": "/api/docs",
@@ -106,7 +106,7 @@ async def health_check():
         
         return {
             "status": "healthy",
-            "service": "IntelliKYC API",
+            "service": "iKYC API",
             "timestamp": datetime.now().isoformat(),
             "redis": redis_status,
             "version": "1.0.0"

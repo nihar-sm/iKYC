@@ -9,7 +9,7 @@ import subprocess
 BASE_URL = "http://localhost:8001"
 
 def test_api():
-    print("=== Testing IntelliKYC Blockchain API ===")
+    print("=== Testing iKYC Blockchain API ===")
     
     try:
         # 1. Health check
