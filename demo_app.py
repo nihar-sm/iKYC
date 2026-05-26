@@ -387,11 +387,6 @@ def page_home():
 
 # ── Registration (no st.form — prevents Enter-key submission) ─────────────────
 
-def _fmt_aadhaar():
-    """Reformat Aadhaar input as XXXX XXXX XXXX on every keystroke."""
-    raw = re.sub(r'\D', '', st.session_state.get("_ra", ""))[:12]
-    st.session_state["_ra"] = " ".join(raw[i:i+4] for i in range(0, len(raw), 4))
-
 def _fmt_pan():
     """Uppercase PAN and strip invalid chars."""
     st.session_state["_rpan"] = re.sub(r'[^A-Z0-9]', '', st.session_state.get("_rpan", "").upper())[:10]
@@ -416,10 +411,8 @@ def page_registration():
             st.text_input(
                 "Aadhaar Number *",
                 key="_ra",
-                placeholder="XXXX XXXX XXXX",
-                max_chars=14,   # 12 digits + 2 spaces
-                on_change=_fmt_aadhaar,
-                help="12-digit number printed on your Aadhaar card",
+                placeholder="123456789012",
+                max_chars=12,
             )
         else:
             st.text_input(
@@ -442,12 +435,11 @@ def page_registration():
             return
 
         if doc_type == "Aadhaar":
-            digits = re.sub(r'\D', '', st.session_state.get("_ra", ""))
-            if len(digits) != 12:
+            doc_num = re.sub(r'\D', '', st.session_state.get("_ra", ""))
+            if len(doc_num) != 12:
                 st.error("Aadhaar number must be exactly 12 digits.")
                 return
-            id_key  = "aadhaar_number"
-            doc_num = st.session_state.get("_ra", "")     # keep formatted (with spaces)
+            id_key = "aadhaar_number"
         else:
             doc_num = st.session_state.get("_rpan", "").strip()
             if not re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', doc_num):
