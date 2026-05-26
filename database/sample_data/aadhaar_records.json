@@ -1,0 +1,26 @@
+{
+  "sample_aadhaar_records": [
+    {
+      "aadhaar_number": "123456789012",
+      "name": "John Doe",
+      "father_name": "Robert Doe",
+      "date_of_birth": "01/01/1990",
+      "gender": "Male",
+      "address": "123 Main Street, Bangalore, Karnataka 560001",
+      "phone_number": "9876543210",
+      "email": "john.doe@example.com",
+      "verification_status": "verified"
+    },
+    {
+      "aadhaar_number": "987654321098",
+      "name": "Jane Smith",
+      "father_name": "Michael Smith",
+      "date_of_birth": "15/05/1985",
+      "gender": "Female",
+      "address": "456 Oak Avenue, Mumbai, Maharashtra 400001",
+      "phone_number": "8765432109",
+      "email": "jane.smith@example.com",
+      "verification_status": "pending"
+    }
+  ]
+}

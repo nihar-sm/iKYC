@@ -1,0 +1,28 @@
+{
+  "sample_sessions": [
+    {
+      "session_id": "sess_12345",
+      "user_id": "user_001",
+      "ip_address": "192.168.1.100",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "current_step": "document_upload",
+      "session_data": {
+        "documents_uploaded": ["aadhaar"],
+        "verification_attempts": 1
+      },
+      "is_active": true
+    },
+    {
+      "session_id": "sess_67890",
+      "user_id": "user_002",
+      "ip_address": "192.168.1.101",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+      "current_step": "otp_verification",
+      "session_data": {
+        "documents_uploaded": ["aadhaar", "pan"],
+        "verification_attempts": 2
+      },
+      "is_active": false
+    }
+  ]
+}

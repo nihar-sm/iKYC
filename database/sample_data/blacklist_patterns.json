@@ -1,0 +1,22 @@
+{
+  "blacklisted_numbers": [
+    {
+      "identifier": "fraud_aadhaar_001",
+      "type": "aadhaar",
+      "number": "000000000000",
+      "reason": "Known fraudulent document"
+    },
+    {
+      "identifier": "fraud_pan_001", 
+      "type": "pan",
+      "number": "FRAUD1234A",
+      "reason": "Fake PAN number"
+    },
+    {
+      "identifier": "fraud_phone_001",
+      "type": "phone",
+      "number": "0000000000",
+      "reason": "Suspicious phone number"
+    }
+  ]
+}
