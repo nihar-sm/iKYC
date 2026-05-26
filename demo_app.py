@@ -397,51 +397,45 @@ def page_registration():
     st.markdown("### Customer Registration")
     st.markdown("Enter details exactly as they appear on your identity document.")
 
+    # Capture return values directly — more reliable than session_state lookup on button click
     c1, c2 = st.columns(2)
     with c1:
-        st.text_input("Full Name *", key="_rn", placeholder="As on Aadhaar / PAN")
-        st.date_input("Date of Birth *", key="_rd", min_value=datetime(1900, 1, 1).date())
-        st.text_input("Email *", key="_re", placeholder="you@example.com")
+        name  = st.text_input("Full Name *",      placeholder="As on Aadhaar / PAN")
+        dob   = st.date_input("Date of Birth *",   min_value=datetime(1900, 1, 1).date())
+        email = st.text_input("Email *",           placeholder="you@example.com")
     with c2:
-        st.text_input("Phone *", key="_rp", placeholder="+91 98765 43210")
-        st.selectbox("Document Type *", ["Aadhaar", "PAN"], key="_rt")
-        doc_type = st.session_state.get("_rt", "Aadhaar")
+        phone    = st.text_input("Phone *",        placeholder="+91 98765 43210")
+        doc_type = st.selectbox("Document Type *", ["Aadhaar", "PAN"], key="_rt")
 
         if doc_type == "Aadhaar":
-            st.text_input(
-                "Aadhaar Number *",
-                key="_ra",
-                placeholder="123456789012",
-                max_chars=12,
-            )
+            doc_num_raw = st.text_input("Aadhaar Number *", placeholder="123456789012", max_chars=12)
         else:
-            st.text_input(
+            doc_num_raw = st.text_input(
                 "PAN Number *",
                 key="_rpan",
                 placeholder="ABCDE1234F",
                 max_chars=10,
                 on_change=_fmt_pan,
-                help="10-character alphanumeric PAN (e.g. ABCDE1234F)",
             )
 
     if st.button("Continue", type="primary", use_container_width=True):
-        name  = st.session_state.get("_rn", "").strip()
-        dob   = st.session_state.get("_rd")
-        email = st.session_state.get("_re", "").strip()
-        phone = st.session_state.get("_rp", "").strip()
+        name  = name.strip()
+        email = email.strip()
+        phone = phone.strip()
 
         if not all([name, email, phone]):
             st.error("Please fill all required fields.")
             return
 
         if doc_type == "Aadhaar":
-            doc_num = re.sub(r'\D', '', st.session_state.get("_ra", ""))
-            if len(doc_num) != 12:
+            digits = re.sub(r'\D', '', doc_num_raw)
+            if len(digits) != 12:
                 st.error("Aadhaar number must be exactly 12 digits.")
                 return
-            id_key = "aadhaar_number"
+            id_key  = "aadhaar_number"
+            doc_num = digits
         else:
-            doc_num = st.session_state.get("_rpan", "").strip()
+            doc_num = doc_num_raw.strip().upper()
             if not re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', doc_num):
                 st.error("Invalid PAN. Expected format: ABCDE1234F (5 letters · 4 digits · 1 letter)")
                 return
