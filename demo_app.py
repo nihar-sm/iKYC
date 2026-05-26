@@ -389,7 +389,7 @@ def page_home():
 
 def _fmt_pan():
     """Uppercase PAN and strip invalid chars."""
-    st.session_state["_rpan"] = re.sub(r'[^A-Z0-9]', '', st.session_state.get("_rpan", "").upper())[:10]
+    st.session_state["reg_pan"] = re.sub(r'[^A-Z0-9]', '', st.session_state.get("reg_pan", "").upper())[:10]
 
 
 def page_registration():
@@ -397,45 +397,46 @@ def page_registration():
     st.markdown("### Customer Registration")
     st.markdown("Enter details exactly as they appear on your identity document.")
 
-    # Capture return values directly — more reliable than session_state lookup on button click
+    # Explicit keys on every widget so Streamlit always identifies them correctly across reruns
     c1, c2 = st.columns(2)
     with c1:
-        name  = st.text_input("Full Name *",      placeholder="As on Aadhaar / PAN")
-        dob   = st.date_input("Date of Birth *",   min_value=datetime(1900, 1, 1).date())
-        email = st.text_input("Email *",           placeholder="you@example.com")
+        name  = st.text_input("Full Name *",     key="reg_name",  placeholder="As on Aadhaar / PAN")
+        dob   = st.date_input("Date of Birth *", key="reg_dob",   min_value=datetime(1900, 1, 1).date())
+        email = st.text_input("Email *",         key="reg_email", placeholder="you@example.com")
     with c2:
-        phone    = st.text_input("Phone *",        placeholder="+91 98765 43210")
-        doc_type = st.selectbox("Document Type *", ["Aadhaar", "PAN"], key="_rt")
+        phone    = st.text_input("Phone *",        key="reg_phone", placeholder="+91 98765 43210")
+        doc_type = st.selectbox("Document Type *", ["Aadhaar", "PAN"], key="reg_dtype")
 
         if doc_type == "Aadhaar":
-            doc_num_raw = st.text_input("Aadhaar Number *", placeholder="123456789012", max_chars=12)
+            doc_num_raw = st.text_input(
+                "Aadhaar Number *", key="reg_aadhaar",
+                placeholder="123456789012", max_chars=12,
+            )
         else:
             doc_num_raw = st.text_input(
-                "PAN Number *",
-                key="_rpan",
-                placeholder="ABCDE1234F",
-                max_chars=10,
+                "PAN Number *", key="reg_pan",
+                placeholder="ABCDE1234F", max_chars=10,
                 on_change=_fmt_pan,
             )
 
     if st.button("Continue", type="primary", use_container_width=True):
-        name  = name.strip()
-        email = email.strip()
-        phone = phone.strip()
+        name  = (name  or "").strip()
+        email = (email or "").strip()
+        phone = (phone or "").strip()
 
-        if not all([name, email, phone]):
+        if not name or not email or not phone:
             st.error("Please fill all required fields.")
             return
 
         if doc_type == "Aadhaar":
-            digits = re.sub(r'\D', '', doc_num_raw)
+            digits = re.sub(r'\D', '', doc_num_raw or "")
             if len(digits) != 12:
                 st.error("Aadhaar number must be exactly 12 digits.")
                 return
             id_key  = "aadhaar_number"
             doc_num = digits
         else:
-            doc_num = doc_num_raw.strip().upper()
+            doc_num = (doc_num_raw or "").strip().upper()
             if not re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', doc_num):
                 st.error("Invalid PAN. Expected format: ABCDE1234F (5 letters · 4 digits · 1 letter)")
                 return
