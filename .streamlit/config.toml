@@ -11,5 +11,8 @@ headless = true
 enableCORS = false
 enableXsrfProtection = true
 
+[runner]
+magicEnabled = false
+
 [browser]
 gatherUsageStats = false

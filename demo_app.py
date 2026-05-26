@@ -365,8 +365,14 @@ def page_home():
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
     client = _groq_client()
-    c1.success("Groq AI: Connected") if client else c1.warning("Groq AI: Demo mode")
-    c2.success("MediaPipe: Ready") if _MP_OK else c2.warning("MediaPipe: Unavailable")
+    if client:
+        c1.success("Groq AI: Connected")
+    else:
+        c1.warning("Groq AI: Demo mode")
+    if _MP_OK:
+        c2.success("MediaPipe: Ready")
+    else:
+        c2.warning("MediaPipe: Unavailable")
     c3.success("Blockchain: Ready")
 
     if not client:
