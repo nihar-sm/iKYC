@@ -387,39 +387,33 @@ def page_home():
 
 # ── Registration (no st.form — prevents Enter-key submission) ─────────────────
 
-def _fmt_pan():
-    """Uppercase PAN and strip invalid chars."""
-    st.session_state["reg_pan"] = re.sub(r'[^A-Z0-9]', '', st.session_state.get("reg_pan", "").upper())[:10]
-
-
 def page_registration():
     st.markdown('<span class="step-badge">Step 1 of 6</span>', unsafe_allow_html=True)
     st.markdown("### Customer Registration")
     st.markdown("Enter details exactly as they appear on your identity document.")
 
-    # Explicit keys on every widget so Streamlit always identifies them correctly across reruns
-    c1, c2 = st.columns(2)
-    with c1:
-        name  = st.text_input("Full Name *",     key="reg_name",  placeholder="As on Aadhaar / PAN")
-        dob   = st.date_input("Date of Birth *", key="reg_dob",   min_value=datetime(1900, 1, 1).date())
-        email = st.text_input("Email *",         key="reg_email", placeholder="you@example.com")
-    with c2:
-        phone    = st.text_input("Phone *",        key="reg_phone", placeholder="+91 98765 43210")
-        doc_type = st.selectbox("Document Type *", ["Aadhaar", "PAN"], key="reg_dtype")
+    # Selectbox lives outside the form so switching Aadhaar/PAN triggers an immediate rerender
+    doc_type = st.selectbox("Document Type *", ["Aadhaar", "PAN"], key="reg_dtype")
 
-        if doc_type == "Aadhaar":
-            doc_num_raw = st.text_input(
-                "Aadhaar Number *", key="reg_aadhaar",
-                placeholder="123456789012", max_chars=12,
-            )
-        else:
-            doc_num_raw = st.text_input(
-                "PAN Number *", key="reg_pan",
-                placeholder="ABCDE1234F", max_chars=10,
-                on_change=_fmt_pan,
-            )
+    # st.form with enter_to_submit=False:
+    #   - all field values are sent atomically on button click (no debounce race)
+    #   - pressing Enter in a text field does NOT submit
+    with st.form("reg_form", enter_to_submit=False):
+        c1, c2 = st.columns(2)
+        with c1:
+            name  = st.text_input("Full Name *",     placeholder="As on Aadhaar / PAN")
+            dob   = st.date_input("Date of Birth *", min_value=datetime(1900, 1, 1).date())
+            email = st.text_input("Email *",         placeholder="you@example.com")
+        with c2:
+            phone = st.text_input("Phone *", placeholder="+91 98765 43210")
+            if doc_type == "Aadhaar":
+                doc_num_raw = st.text_input("Aadhaar Number *", placeholder="123456789012", max_chars=12)
+            else:
+                doc_num_raw = st.text_input("PAN Number *", placeholder="ABCDE1234F", max_chars=10)
 
-    if st.button("Continue", type="primary", use_container_width=True):
+        submitted = st.form_submit_button("Continue", type="primary", use_container_width=True)
+
+    if submitted:
         name  = (name  or "").strip()
         email = (email or "").strip()
         phone = (phone or "").strip()
@@ -433,12 +427,11 @@ def page_registration():
             if len(digits) != 12:
                 st.error("Aadhaar number must be exactly 12 digits.")
                 return
-            id_key  = "aadhaar_number"
-            doc_num = digits
+            id_key, doc_num = "aadhaar_number", digits
         else:
             doc_num = (doc_num_raw or "").strip().upper()
             if not re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', doc_num):
-                st.error("Invalid PAN. Expected format: ABCDE1234F (5 letters · 4 digits · 1 letter)")
+                st.error("Invalid PAN. Expected: ABCDE1234F (5 letters · 4 digits · 1 letter)")
                 return
             id_key = "pan_number"
 
