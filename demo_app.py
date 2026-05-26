@@ -622,6 +622,8 @@ def page_liveness():
     st.markdown("---")
     cur = _LV_STEPS[cs["step"]]
 
+    photo_key = f"_lv_photo_{cs['step']}"
+
     c1, c2 = st.columns([2, 1])
     with c1:
         st.markdown(f"**{cur['label']}**")
@@ -629,34 +631,36 @@ def page_liveness():
             "Position yourself, then click to capture",
             key=f"_lv_cam_{cs['step']}",
         )
-        if photo:
+        # Persist bytes into session_state the moment camera fires so they
+        # survive the Verify-button rerun (camera widget can reset to None)
+        if photo is not None:
+            st.session_state[photo_key] = photo.read()
+
+        photo_bytes = st.session_state.get(photo_key)
+
+        if photo_bytes:
             if st.button("Verify", type="primary", use_container_width=True, key=f"_lv_btn_{cs['step']}"):
                 with st.spinner("Analysing pose…"):
-                    pose = detect_head_pose(photo.read())
+                    pose = detect_head_pose(photo_bytes)
 
                 expected = cur["key"]
 
                 if pose.get("mock"):
-                    ok = True  # always pass when no MediaPipe
+                    ok = True
                 elif not pose.get("face_detected"):
                     ok = False
                 elif expected == "center":
                     ok = abs(pose.get("deviation", 0)) < 0.22
                 else:
-                    # left or right: just need significant displacement (ignore exact direction
-                    # since camera mirroring varies by platform)
                     ok = abs(pose.get("deviation", 0)) > 0.14
 
-                cs["results"].append({"step": expected, "passed": ok, "pose": pose})
-
                 if ok:
+                    cs["results"].append({"step": expected, "passed": True, "pose": pose})
                     cs["step"] += 1
-                    st.success(f"✓ Verified — moving to next step")
-                    time.sleep(0.4)
+                    st.session_state.pop(photo_key, None)  # clear stored photo for this step
+                    st.rerun()
                 else:
-                    cs["results"].pop()  # don't count failed attempt
-                    st.error("Head position not detected. Please turn your head more clearly and try again.")
-                st.rerun()
+                    st.error("Head position not detected clearly. Turn your head more and try again.")
 
     with c2:
         st.markdown(f"**Step {cs['step'] + 1} of {len(_LV_STEPS)}**")
