@@ -47,15 +47,19 @@ def _apply_styles():
         """
         <style>
         .kyc-title {
-            font-size: 2.2em; font-weight: 800;
+            font-size: 2em; font-weight: 700; letter-spacing: -0.5px;
             background: linear-gradient(90deg, #7c3aed, #2563eb);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 0;
+        }
+        .kyc-sub {
+            font-size: 0.95em; color: #6b7280; margin-top: 4px; margin-bottom: 0;
         }
         .step-badge {
             display: inline-block;
             background: #7c3aed; color: white;
             border-radius: 20px; padding: 2px 14px;
-            font-size: 0.85em; font-weight: 600;
+            font-size: 0.8em; font-weight: 600; letter-spacing: 0.3px;
         }
         .hash-box {
             font-family: monospace; font-size: 0.75em;
@@ -63,6 +67,26 @@ def _apply_styles():
             padding: 8px 12px; border-radius: 6px;
             word-break: break-all;
         }
+        .feature-card {
+            background: #1e1e2e; border-radius: 8px;
+            padding: 16px 18px; border: 1px solid #2d2d3f;
+        }
+        .feature-card h4 { margin: 0 0 6px 0; font-size: 0.95em; font-weight: 600; color: #e2e8f0; }
+        .feature-card p { margin: 0; font-size: 0.85em; color: #94a3b8; line-height: 1.5; }
+        .notice-box {
+            background: #1e293b; border-left: 3px solid #7c3aed;
+            border-radius: 0 6px 6px 0; padding: 10px 14px;
+            font-size: 0.88em; color: #cbd5e1;
+        }
+        .step-grid {
+            display: flex; gap: 0; align-items: center;
+        }
+        .step-item {
+            flex: 1; text-align: center; font-size: 0.78em;
+            color: #94a3b8; padding: 8px 4px;
+        }
+        .step-item strong { display: block; color: #e2e8f0; font-weight: 600; font-size: 1.05em; }
+        .step-arrow { color: #4b5563; font-size: 0.9em; }
         </style>
         """,
         unsafe_allow_html=True,
@@ -86,10 +110,7 @@ def _groq_client():
 
 # ── AI analysis ───────────────────────────────────────────────────────────────
 def analyze_document(image_bytes: bytes, doc_type: str, customer: Dict) -> Dict:
-    """
-    Single Groq Vision call: OCR + field validation + fraud scoring.
-    Falls back to deterministic mock when API key is absent.
-    """
+    """Single Groq Vision call: OCR + field validation + fraud scoring."""
     client = _groq_client()
     if not client:
         return _mock_analysis(customer, doc_type)
@@ -156,7 +177,7 @@ Respond with ONLY valid JSON, no markdown fences:
         if m:
             return json.loads(m.group())
     except Exception as e:
-        st.caption(f"⚠️ Groq error: {e} — using demo results.")
+        st.caption(f"Groq error: {e} — using demo results.")
 
     return _mock_analysis(customer, doc_type)
 
@@ -245,37 +266,52 @@ def _init():
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 def _sidebar():
     with st.sidebar:
-        st.markdown("### 🔐 IntelliKYC")
+        st.markdown("**IntelliKYC**")
         st.caption("AI-Powered KYC Verification")
         st.markdown("---")
 
         steps = [
-            (1, "🏠 Home"),
-            (2, "📝 Registration"),
-            (3, "🆔 Document Upload"),
-            (4, "🤖 AI Analysis"),
-            (5, "👁️ Face Liveness"),
-            (6, "⛓️ Blockchain"),
-            (7, "✅ Decision"),
+            (1, "Home"),
+            (2, "Registration"),
+            (3, "Document Upload"),
+            (4, "AI Analysis"),
+            (5, "Face Liveness"),
+            (6, "Blockchain"),
+            (7, "Decision"),
         ]
         cur = st.session_state.step
         for n, label in steps:
             if n < cur:
-                st.markdown(f"<span style='color:#6b7280'>✓ {label}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#6b7280; font-size:0.9em'>✓ {n}. {label}</span>", unsafe_allow_html=True)
             elif n == cur:
-                st.markdown(f"**→ {label}**")
+                st.markdown(f"<span style='color:#7c3aed; font-weight:600; font-size:0.9em'>→ {n}. {label}</span>", unsafe_allow_html=True)
             else:
-                st.markdown(f"<span style='color:#374151'>&nbsp;&nbsp;{label}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#374151; font-size:0.9em'>&nbsp;&nbsp;{n}. {label}</span>", unsafe_allow_html=True)
 
         st.markdown("---")
         client = _groq_client()
-        st.markdown(f"{'✅' if client else '⚠️'} **Groq AI**: {'Connected' if client else 'Demo mode'}")
-        st.markdown(f"{'✅' if _MP_OK else '⚠️'} **MediaPipe**: {'Ready' if _MP_OK else 'Unavailable'}")
-        st.markdown("✅ **Blockchain**: Ready")
+
+        ai_status = "Connected" if client else "Demo mode"
+        ai_color = "#22c55e" if client else "#f59e0b"
+        mp_status = "Ready" if _MP_OK else "Unavailable"
+        mp_color = "#22c55e" if _MP_OK else "#f59e0b"
+
+        st.markdown(
+            f"<span style='color:{ai_color}; font-size:0.85em'>● Groq AI: {ai_status}</span>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<span style='color:{mp_color}; font-size:0.85em'>● MediaPipe: {mp_status}</span>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<span style='color:#22c55e; font-size:0.85em'>● Blockchain: Ready</span>",
+            unsafe_allow_html=True,
+        )
 
         st.markdown("---")
-        st.caption("Tech: Groq Llama 4 Scout · MediaPipe · SHA-256 · Streamlit")
-        st.caption("[GitHub ↗](https://github.com/nihar-sm/iKYC)  |  Team Vagabond")
+        st.caption("Groq Llama 4 Scout · MediaPipe · SHA-256 · Streamlit")
+        st.caption("[GitHub](https://github.com/nihar-sm/iKYC)  ·  Team Vagabond")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -283,39 +319,73 @@ def _sidebar():
 # ─────────────────────────────────────────────────────────────────────────────
 
 def page_home():
-    st.markdown('<div class="kyc-title">IntelliKYC — AI-Powered Identity Verification</div>', unsafe_allow_html=True)
-    st.caption("Hackverse 2025 · Team Vagabond · 🥈 2nd Place — Fintech Category")
+    st.markdown('<div class="kyc-title">IntelliKYC</div>', unsafe_allow_html=True)
+    st.markdown('<p class="kyc-sub">AI-Powered Identity Verification Pipeline</p>', unsafe_allow_html=True)
     st.markdown("---")
 
     c1, c2, c3 = st.columns(3)
-    c1.info("**🤖 Groq Vision AI**\nLlama 4 Scout analyses document images — extracts fields, validates data, and scores fraud risk in a single API call.")
-    c2.info("**👁️ Face Liveness**\nMediaPipe detects face presence and alignment. Ensures the person matches their submitted document.")
-    c3.info("**⛓️ Blockchain Record**\nEach verified KYC creates an immutable SHA-256 transaction hash with a zero-knowledge proof ID for privacy.")
+    with c1:
+        st.markdown(
+            '<div class="feature-card"><h4>Groq Vision AI</h4>'
+            '<p>Llama 4 Scout analyses document images — extracts fields, validates data, '
+            'and scores fraud risk in a single API call.</p></div>',
+            unsafe_allow_html=True,
+        )
+    with c2:
+        st.markdown(
+            '<div class="feature-card"><h4>Face Liveness</h4>'
+            '<p>MediaPipe detects face presence and alignment, ensuring the person '
+            'matches their submitted document.</p></div>',
+            unsafe_allow_html=True,
+        )
+    with c3:
+        st.markdown(
+            '<div class="feature-card"><h4>Blockchain Record</h4>'
+            '<p>Each verified KYC creates an immutable SHA-256 transaction hash '
+            'with a zero-knowledge proof ID for privacy.</p></div>',
+            unsafe_allow_html=True,
+        )
 
-    st.markdown("### KYC Pipeline")
-    cols = st.columns(7)
-    for col, label in zip(cols, ["📝 Register", "🆔 Upload", "🤖 AI Scan", "👁️ Liveness", "⛓️ Blockchain", "✅ Decision", ""]):
-        col.markdown(f"**{label}**" if label else "")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("**Verification pipeline**")
+    pipeline_cols = st.columns(11)
+    steps = ["Register", "Upload Doc", "AI Scan", "Liveness", "Blockchain", "Decision"]
+    for i, step in enumerate(steps):
+        pipeline_cols[i * 2].markdown(
+            f"<div style='text-align:center; font-size:0.8em; color:#e2e8f0; "
+            f"background:#1e1e2e; border-radius:6px; padding:6px 4px;'>{step}</div>",
+            unsafe_allow_html=True,
+        )
+        if i < len(steps) - 1:
+            pipeline_cols[i * 2 + 1].markdown(
+                "<div style='text-align:center; color:#4b5563; padding-top:6px;'>→</div>",
+                unsafe_allow_html=True,
+            )
 
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
     client = _groq_client()
-    c1.success("✅ Groq AI: Connected") if client else c1.warning("⚠️ Groq AI: Demo mode (no API key)")
-    c2.success("✅ MediaPipe: Ready") if _MP_OK else c2.warning("⚠️ MediaPipe: Unavailable")
-    c3.success("✅ Blockchain: Ready")
+    c1.success("Groq AI: Connected") if client else c1.warning("Groq AI: Demo mode")
+    c2.success("MediaPipe: Ready") if _MP_OK else c2.warning("MediaPipe: Unavailable")
+    c3.success("Blockchain: Ready")
 
     if not client:
-        st.info("💡 **To enable live AI analysis:** add `GROQ_API_KEY` in Streamlit Cloud → App Settings → Secrets.  \nGet a free key at [console.groq.com](https://console.groq.com).")
+        st.markdown(
+            '<div class="notice-box">To enable live AI analysis, add <strong>GROQ_API_KEY</strong> '
+            'in Streamlit Cloud → App Settings → Secrets. '
+            'Get a free key at <a href="https://console.groq.com" target="_blank">console.groq.com</a>.</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("---")
-    if st.button("🚀 Start KYC Verification", type="primary", use_container_width=True):
+    if st.button("Start KYC Verification", type="primary", use_container_width=True):
         st.session_state.step = 2
         st.rerun()
 
 
 def page_registration():
     st.markdown('<span class="step-badge">Step 1 of 6</span>', unsafe_allow_html=True)
-    st.header("📝 Customer Registration")
+    st.markdown("### Customer Registration")
     st.markdown("Enter details **exactly as they appear** on your identity document.")
 
     with st.form("reg_form"):
@@ -332,7 +402,7 @@ def page_registration():
                 placeholder="XXXX XXXX XXXX" if doc_type == "Aadhaar" else "ABCDE1234F",
             )
 
-        if st.form_submit_button("Continue →", type="primary", use_container_width=True):
+        if st.form_submit_button("Continue", type="primary", use_container_width=True):
             if not all([name, email, phone, doc_num]):
                 st.error("Please fill all required fields.")
             else:
@@ -342,18 +412,18 @@ def page_registration():
                     "email": email, "phone": phone, id_key: doc_num,
                 }
                 st.session_state.doc_type = doc_type.lower()
-                st.success("✅ Registration saved.")
+                st.success("Registration saved.")
                 st.session_state.step = 3
                 st.rerun()
 
 
 def page_document():
     st.markdown('<span class="step-badge">Step 2 of 6</span>', unsafe_allow_html=True)
-    st.header("🆔 Document Upload")
+    st.markdown("### Document Upload")
 
     if not st.session_state.customer:
         st.warning("Complete registration first.")
-        if st.button("← Registration"):
+        if st.button("Back to Registration"):
             st.session_state.step = 2; st.rerun()
         return
 
@@ -367,13 +437,13 @@ def page_document():
             if f.size > 10 * 1024 * 1024:
                 st.error("File exceeds 10 MB."); return
             st.image(f, caption=f"Your {doc_label}", use_container_width=True)
-            if st.button("✅ Confirm & Continue →", type="primary", use_container_width=True):
+            if st.button("Confirm & Continue", type="primary", use_container_width=True):
                 st.session_state.doc_bytes = f.read()
                 st.session_state.step = 4
                 st.rerun()
     with c2:
-        st.markdown("**Tips for a good scan:**")
-        st.markdown("- Card fully visible, flat on surface  \n- Even lighting, no glare  \n- JPG or PNG, under 10 MB")
+        st.markdown("**Tips for a good scan**")
+        st.markdown("- Card fully visible, flat on surface\n- Even lighting, no glare\n- JPG or PNG, under 10 MB")
         cust = st.session_state.customer
         if cust:
             st.markdown("---")
@@ -382,19 +452,18 @@ def page_document():
 
 def page_ai_analysis():
     st.markdown('<span class="step-badge">Step 3 of 6</span>', unsafe_allow_html=True)
-    st.header("🤖 AI Document Analysis")
+    st.markdown("### AI Document Analysis")
 
     if not st.session_state.doc_bytes:
         st.warning("Upload a document first.")
-        if st.button("← Document"):
+        if st.button("Back to Document"):
             st.session_state.step = 3; st.rerun()
         return
 
-    # Already analysed — show results
     if st.session_state.analysis:
         _show_analysis(st.session_state.analysis)
         st.markdown("---")
-        if st.button("Continue to Face Liveness →", type="primary", use_container_width=True):
+        if st.button("Continue to Face Liveness", type="primary", use_container_width=True):
             st.session_state.step = 5; st.rerun()
         return
 
@@ -403,8 +472,8 @@ def page_ai_analysis():
         st.image(st.session_state.doc_bytes, caption="Document", use_container_width=True)
     with c2:
         st.markdown("**Groq Vision will:**")
-        st.markdown("1. 🔍 Extract all text (OCR)\n2. ✅ Validate fields vs. registration\n3. 🚨 Detect fraud patterns\n4. 📊 Score risk level")
-        if st.button("🤖 Run AI Analysis", type="primary", use_container_width=True):
+        st.markdown("1. Extract all text (OCR)\n2. Validate fields vs. registration\n3. Detect fraud patterns\n4. Score risk level")
+        if st.button("Run AI Analysis", type="primary", use_container_width=True):
             with st.spinner("Groq AI is analysing your document…"):
                 result = analyze_document(
                     st.session_state.doc_bytes,
@@ -419,7 +488,7 @@ def _show_analysis(r: Dict):
     fraud = r.get("fraud", {})
     match = r.get("field_match", {})
     risk = fraud.get("risk_level", "LOW")
-    badge = {"LOW": "✅", "MEDIUM": "⚠️", "HIGH": "❌"}.get(risk, "❓")
+    badge = {"LOW": "✅", "MEDIUM": "⚠️", "HIGH": "❌"}.get(risk, "—")
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Fraud Risk", f"{badge} {risk}", f"score {fraud.get('risk_score', 0):.2f}")
@@ -427,7 +496,7 @@ def _show_analysis(r: Dict):
     c3.metric("Field Match", f"{match.get('overall_score', 0.9):.0%}")
     c4.metric("Recommendation", r.get("recommendation", "REVIEW"))
 
-    with st.expander("📋 Extracted Fields", expanded=True):
+    with st.expander("Extracted Fields", expanded=True):
         ex = r.get("extracted_fields", {})
         a, b = st.columns(2)
         items = list(ex.items())
@@ -438,68 +507,68 @@ def _show_analysis(r: Dict):
 
     inds = fraud.get("indicators", [])
     if inds:
-        with st.expander("⚠️ Fraud Indicators"):
+        with st.expander("Fraud Indicators"):
             for i in inds: st.warning(f"• {i}")
     else:
-        st.success("✅ No fraud indicators detected")
+        st.success("No fraud indicators detected")
 
     if r.get("mock"):
-        st.caption("ℹ️ Demo mode — add GROQ_API_KEY for real AI analysis.")
+        st.caption("Demo mode — add GROQ_API_KEY for real AI analysis.")
 
 
 def page_liveness():
     st.markdown('<span class="step-badge">Step 4 of 6</span>', unsafe_allow_html=True)
-    st.header("👁️ Face Liveness Detection")
+    st.markdown("### Face Liveness Detection")
 
     if not st.session_state.analysis:
         st.warning("Complete AI analysis first.")
-        if st.button("← Analysis"):
+        if st.button("Back to Analysis"):
             st.session_state.step = 4; st.rerun()
         return
 
     if st.session_state.liveness:
         lv = st.session_state.liveness
         if lv.get("face_detected"):
-            st.success(f"✅ Face verified — confidence {lv.get('confidence', 0):.0%}")
+            st.success(f"Face verified — confidence {lv.get('confidence', 0):.0%}")
             if lv.get("mock"):
-                st.caption("ℹ️ MediaPipe unavailable — using mock detection.")
+                st.caption("MediaPipe unavailable — using mock detection.")
         else:
-            st.error("❌ No face detected. Please retake.")
-            if st.button("🔄 Retake"):
+            st.error("No face detected. Please retake.")
+            if st.button("Retake"):
                 st.session_state.liveness = None; st.rerun()
 
         st.markdown("---")
-        if st.button("Continue to Blockchain →", type="primary", use_container_width=True):
+        if st.button("Continue to Blockchain", type="primary", use_container_width=True):
             st.session_state.step = 6; st.rerun()
         return
 
     c1, c2 = st.columns([2, 1])
     with c1:
         st.info("Take a clear selfie. Look directly at the camera with good lighting.")
-        photo = st.camera_input("📷 Take selfie")
+        photo = st.camera_input("Take selfie")
         if photo:
-            if st.button("🔍 Verify Face", type="primary", use_container_width=True):
+            if st.button("Verify Face", type="primary", use_container_width=True):
                 with st.spinner("MediaPipe analysing…"):
                     result = detect_face(photo.read())
                 st.session_state.liveness = result
                 st.rerun()
     with c2:
-        st.markdown("**Tips:**\n- Face fully visible\n- Even lighting\n- Look straight at camera\n- Remove glasses if needed")
+        st.markdown("**Tips**\n- Face fully visible\n- Even lighting\n- Look straight at camera\n- Remove glasses if needed")
 
 
 def page_blockchain():
     st.markdown('<span class="step-badge">Step 5 of 6</span>', unsafe_allow_html=True)
-    st.header("⛓️ Blockchain Recording")
+    st.markdown("### Blockchain Recording")
 
     if not st.session_state.liveness:
         st.warning("Complete liveness check first.")
-        if st.button("← Liveness"):
+        if st.button("Back to Liveness"):
             st.session_state.step = 5; st.rerun()
         return
 
     if st.session_state.blockchain:
         rec = st.session_state.blockchain
-        st.success("✅ KYC record committed to blockchain")
+        st.success("KYC record committed to blockchain")
         c1, c2 = st.columns(2)
         with c1:
             st.markdown("**Transaction Hash**")
@@ -510,10 +579,10 @@ def page_blockchain():
             st.markdown("**ZK-Proof ID**")
             st.markdown(f'<div class="hash-box">{rec["zk_proof_id"]}</div>', unsafe_allow_html=True)
             st.markdown(f"**Timestamp:** `{rec['timestamp']}`")
-            st.markdown(f"**Verification Level:** STANDARD")
+            st.markdown("**Verification Level:** STANDARD")
 
         st.markdown("---")
-        if st.button("View Final Decision →", type="primary", use_container_width=True):
+        if st.button("View Final Decision", type="primary", use_container_width=True):
             fraud = st.session_state.analysis.get("fraud", {})
             lv = st.session_state.liveness
             if fraud.get("risk_score", 0.1) < 0.35 and lv.get("confidence", 0) > 0.55 and lv.get("face_detected"):
@@ -534,7 +603,7 @@ def page_blockchain():
             "4. **Immutability** — altering any field breaks the entire hash chain"
         )
 
-    if st.button("⛓️ Commit to Blockchain", type="primary", use_container_width=True):
+    if st.button("Commit to Blockchain", type="primary", use_container_width=True):
         with st.spinner("Creating immutable record…"):
             time.sleep(0.8)
             rec = create_blockchain_record(
@@ -548,7 +617,7 @@ def page_blockchain():
 
 def page_decision():
     st.markdown('<span class="step-badge">Step 6 of 6</span>', unsafe_allow_html=True)
-    st.header("✅ KYC Decision")
+    st.markdown("### KYC Decision")
 
     decision = st.session_state.decision or "UNKNOWN"
     customer = st.session_state.customer
@@ -558,13 +627,13 @@ def page_decision():
     fraud = analysis.get("fraud", {})
 
     if decision == "APPROVED":
-        st.success(f"## 🎉 KYC APPROVED")
+        st.success(f"## KYC Approved")
         st.markdown(f"**{customer.get('full_name', 'Customer')}** has been successfully verified.")
     elif decision == "MANUAL_REVIEW":
-        st.warning(f"## ⚠️ MANUAL REVIEW REQUIRED")
+        st.warning(f"## Manual Review Required")
         st.markdown("Scores are borderline — a human reviewer will make the final call.")
     else:
-        st.error(f"## ❌ KYC REJECTED")
+        st.error(f"## KYC Rejected")
         st.markdown("Verification failed. Please visit your nearest branch with original documents.")
 
     st.markdown("---")
@@ -575,13 +644,13 @@ def page_decision():
     c4.metric("Doc Authenticity", f"{fraud.get('authenticity_score', 0.95):.0%}")
 
     if blockchain:
-        st.markdown("### ⛓️ Blockchain Confirmation")
+        st.markdown("### Blockchain Confirmation")
         c1, c2 = st.columns(2)
         tx = blockchain.get("transaction_hash", "")
         c1.markdown(f"**Tx Hash:** `{tx[:20]}…{tx[-8:]}`")
         c1.markdown(f"**Timestamp:** `{blockchain.get('timestamp', '')}`")
         c2.markdown(f"**ZK-Proof ID:** `{blockchain.get('zk_proof_id', '')}`")
-        c2.markdown("**Status:** ✅ Immutably recorded")
+        c2.markdown("**Status:** Immutably recorded")
 
     st.markdown("---")
     report = {
@@ -609,7 +678,7 @@ def page_decision():
     }
 
     st.download_button(
-        "📥 Download KYC Report (JSON)",
+        "Download KYC Report (JSON)",
         data=json.dumps(report, indent=2),
         file_name=f"kyc_report_{customer.get('full_name','user').replace(' ','_')}.json",
         mime="application/json",
@@ -617,7 +686,7 @@ def page_decision():
     )
 
     st.markdown("---")
-    if st.button("🔄 Start New KYC Verification", use_container_width=True):
+    if st.button("Start New Verification", use_container_width=True):
         for k in list(st.session_state.keys()):
             del st.session_state[k]
         st.rerun()
