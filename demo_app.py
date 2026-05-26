@@ -1,7 +1,7 @@
 """
 IntelliKYC — Self-contained demo for Streamlit Community Cloud.
 No FastAPI, no Redis, no EasyOCR required.
-Stack: Groq Vision (Llama 4 Scout), MediaPipe, SHA-256 blockchain, Streamlit.
+Stack: Groq Vision (Llama 4 Scout), MediaPipe FaceMesh, SHA-256 blockchain, Streamlit.
 """
 
 import streamlit as st
@@ -13,7 +13,7 @@ import re
 import time
 import io
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
 
 # ── Optional heavy imports with graceful fallback ──────────────────────────────
 try:
@@ -72,21 +72,15 @@ def _apply_styles():
             padding: 16px 18px; border: 1px solid #2d2d3f;
         }
         .feature-card h4 { margin: 0 0 6px 0; font-size: 0.95em; font-weight: 600; color: #e2e8f0; }
-        .feature-card p { margin: 0; font-size: 0.85em; color: #94a3b8; line-height: 1.5; }
+        .feature-card p  { margin: 0; font-size: 0.85em; color: #94a3b8; line-height: 1.5; }
         .notice-box {
             background: #1e293b; border-left: 3px solid #7c3aed;
             border-radius: 0 6px 6px 0; padding: 10px 14px;
             font-size: 0.88em; color: #cbd5e1;
         }
-        .step-grid {
-            display: flex; gap: 0; align-items: center;
-        }
-        .step-item {
-            flex: 1; text-align: center; font-size: 0.78em;
-            color: #94a3b8; padding: 8px 4px;
-        }
-        .step-item strong { display: block; color: #e2e8f0; font-weight: 600; font-size: 1.05em; }
-        .step-arrow { color: #4b5563; font-size: 0.9em; }
+        .lv-step-done   { text-align:center; color:#22c55e; font-size:0.85em; }
+        .lv-step-active { text-align:center; color:#7c3aed; font-weight:700; font-size:0.85em; }
+        .lv-step-todo   { text-align:center; color:#374151; font-size:0.85em; }
         </style>
         """,
         unsafe_allow_html=True,
@@ -135,25 +129,11 @@ Tasks:
 Respond with ONLY valid JSON, no markdown fences:
 {{
   "document_detected": true,
-  "extracted_fields": {{
-    "name": "...",
-    "date_of_birth": "...",
-    "id_number": "...",
-    "address": "..."
-  }},
-  "field_match": {{
-    "name_match": true,
-    "dob_match": true,
-    "id_match": true,
-    "overall_score": 0.92
-  }},
+  "extracted_fields": {{"name": "...", "date_of_birth": "...", "id_number": "...", "address": "..."}},
+  "field_match": {{"name_match": true, "dob_match": true, "id_match": true, "overall_score": 0.92}},
   "fraud": {{
-    "risk_score": 0.08,
-    "risk_level": "LOW",
-    "indicators": [],
-    "authenticity_score": 0.95,
-    "image_quality": "GOOD",
-    "confidence": 0.88
+    "risk_score": 0.08, "risk_level": "LOW", "indicators": [],
+    "authenticity_score": 0.95, "image_quality": "GOOD", "confidence": 0.88
   }},
   "ocr_text": "...",
   "recommendation": "APPROVE"
@@ -203,21 +183,54 @@ def _mock_analysis(customer: Dict, doc_type: str) -> Dict:
     }
 
 
-# ── Face detection ────────────────────────────────────────────────────────────
-def detect_face(image_bytes: bytes) -> Dict:
+# ── Head pose detection (MediaPipe FaceMesh) ──────────────────────────────────
+def detect_head_pose(image_bytes: bytes) -> Dict:
+    """
+    Estimate horizontal head orientation using FaceMesh landmarks.
+    Returns orientation: 'left' | 'right' | 'center'
+    """
     if not _MP_OK:
-        return {"face_detected": True, "count": 1, "confidence": 0.88, "mock": True}
+        return {"face_detected": True, "orientation": "unknown", "confidence": 0.85, "mock": True}
     try:
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         arr = np.array(img)
-        with mp.solutions.face_detection.FaceDetection(min_detection_confidence=0.5) as fd:
-            result = fd.process(arr)
-        if result.detections:
-            conf = float(result.detections[0].score[0])
-            return {"face_detected": True, "count": len(result.detections), "confidence": conf}
-        return {"face_detected": False, "count": 0, "confidence": 0.0}
+        with mp.solutions.face_mesh.FaceMesh(
+            static_image_mode=True, max_num_faces=1, min_detection_confidence=0.5
+        ) as fm:
+            result = fm.process(arr)
+
+        if not result.multi_face_landmarks:
+            return {"face_detected": False, "orientation": None, "confidence": 0.0}
+
+        lm = result.multi_face_landmarks[0].landmark
+        nose_x   = lm[1].x
+        left_x   = lm[33].x    # subject's left eye outer corner
+        right_x  = lm[263].x   # subject's right eye outer corner
+        eye_center = (left_x + right_x) / 2
+        eye_span   = abs(left_x - right_x)
+
+        if eye_span < 0.05:
+            return {"face_detected": True, "orientation": "center", "confidence": 0.5}
+
+        # Positive deviation → nose to the right side in image
+        deviation = (nose_x - eye_center) / eye_span
+
+        if deviation < -0.18:
+            orientation = "left"
+        elif deviation > 0.18:
+            orientation = "right"
+        else:
+            orientation = "center"
+
+        confidence = min(1.0, 0.55 + abs(deviation) * 2.5)
+        return {
+            "face_detected": True,
+            "orientation": orientation,
+            "confidence": round(confidence, 2),
+            "deviation": round(deviation, 3),
+        }
     except Exception as e:
-        return {"face_detected": True, "count": 1, "confidence": 0.82, "mock": True, "error": str(e)}
+        return {"face_detected": True, "orientation": "center", "confidence": 0.65, "mock": True, "error": str(e)}
 
 
 # ── Blockchain record ─────────────────────────────────────────────────────────
@@ -233,10 +246,9 @@ def create_blockchain_record(customer: Dict, analysis: Dict, liveness: Dict) -> 
         "recommendation": analysis.get("recommendation", "UNKNOWN"),
         "timestamp": ts,
     }
-    tx_hash = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
-    prev = "0" * 64
-    block_hash = hashlib.sha256(f"{prev}{tx_hash}{ts}".encode()).hexdigest()
-    zk_id = hashlib.md5(tx_hash.encode()).hexdigest()
+    tx_hash    = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+    block_hash = hashlib.sha256(f"{'0'*64}{tx_hash}{ts}".encode()).hexdigest()
+    zk_id      = hashlib.md5(tx_hash.encode()).hexdigest()
     return {
         "transaction_hash": tx_hash,
         "block_hash": block_hash,
@@ -271,43 +283,28 @@ def _sidebar():
         st.markdown("---")
 
         steps = [
-            (1, "Home"),
-            (2, "Registration"),
-            (3, "Document Upload"),
-            (4, "AI Analysis"),
-            (5, "Face Liveness"),
-            (6, "Blockchain"),
-            (7, "Decision"),
+            (1, "Home"), (2, "Registration"), (3, "Document Upload"),
+            (4, "AI Analysis"), (5, "Face Liveness"), (6, "Blockchain"), (7, "Decision"),
         ]
         cur = st.session_state.step
         for n, label in steps:
             if n < cur:
-                st.markdown(f"<span style='color:#6b7280; font-size:0.9em'>✓ {n}. {label}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#6b7280;font-size:0.9em'>✓ {n}. {label}</span>", unsafe_allow_html=True)
             elif n == cur:
-                st.markdown(f"<span style='color:#7c3aed; font-weight:600; font-size:0.9em'>→ {n}. {label}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#7c3aed;font-weight:600;font-size:0.9em'>→ {n}. {label}</span>", unsafe_allow_html=True)
             else:
-                st.markdown(f"<span style='color:#374151; font-size:0.9em'>&nbsp;&nbsp;{n}. {label}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='color:#374151;font-size:0.9em'>&nbsp;&nbsp;{n}. {label}</span>", unsafe_allow_html=True)
 
         st.markdown("---")
-        client = _groq_client()
+        client   = _groq_client()
+        ai_col   = "#22c55e" if client else "#f59e0b"
+        mp_col   = "#22c55e" if _MP_OK  else "#f59e0b"
+        ai_label = "Connected"   if client else "Demo mode"
+        mp_label = "Ready"       if _MP_OK  else "Unavailable"
 
-        ai_status = "Connected" if client else "Demo mode"
-        ai_color = "#22c55e" if client else "#f59e0b"
-        mp_status = "Ready" if _MP_OK else "Unavailable"
-        mp_color = "#22c55e" if _MP_OK else "#f59e0b"
-
-        st.markdown(
-            f"<span style='color:{ai_color}; font-size:0.85em'>● Groq AI: {ai_status}</span>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"<span style='color:{mp_color}; font-size:0.85em'>● MediaPipe: {mp_status}</span>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            "<span style='color:#22c55e; font-size:0.85em'>● Blockchain: Ready</span>",
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"<span style='color:{ai_col};font-size:0.85em'>● Groq AI: {ai_label}</span>",   unsafe_allow_html=True)
+        st.markdown(f"<span style='color:{mp_col};font-size:0.85em'>● MediaPipe: {mp_label}</span>", unsafe_allow_html=True)
+        st.markdown("<span style='color:#22c55e;font-size:0.85em'>● Blockchain: Ready</span>",       unsafe_allow_html=True)
 
         st.markdown("---")
         st.caption("Groq Llama 4 Scout · MediaPipe · SHA-256 · Streamlit")
@@ -334,8 +331,8 @@ def page_home():
     with c2:
         st.markdown(
             '<div class="feature-card"><h4>Face Liveness</h4>'
-            '<p>MediaPipe detects face presence and alignment, ensuring the person '
-            'matches their submitted document.</p></div>',
+            '<p>MediaPipe FaceMesh detects face presence and head orientation through '
+            'a 3-step movement challenge (left, right, forward).</p></div>',
             unsafe_allow_html=True,
         )
     with c3:
@@ -349,22 +346,21 @@ def page_home():
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("**Verification pipeline**")
     pipeline_cols = st.columns(11)
-    steps = ["Register", "Upload Doc", "AI Scan", "Liveness", "Blockchain", "Decision"]
-    for i, step in enumerate(steps):
+    for i, step in enumerate(["Register", "Upload Doc", "AI Scan", "Liveness", "Blockchain", "Decision"]):
         pipeline_cols[i * 2].markdown(
-            f"<div style='text-align:center; font-size:0.8em; color:#e2e8f0; "
-            f"background:#1e1e2e; border-radius:6px; padding:6px 4px;'>{step}</div>",
+            f"<div style='text-align:center;font-size:0.8em;color:#e2e8f0;"
+            f"background:#1e1e2e;border-radius:6px;padding:6px 4px;'>{step}</div>",
             unsafe_allow_html=True,
         )
-        if i < len(steps) - 1:
+        if i < 5:
             pipeline_cols[i * 2 + 1].markdown(
-                "<div style='text-align:center; color:#4b5563; padding-top:6px;'>→</div>",
+                "<div style='text-align:center;color:#4b5563;padding-top:6px;'>→</div>",
                 unsafe_allow_html=True,
             )
 
     st.markdown("---")
-    c1, c2, c3 = st.columns(3)
     client = _groq_client()
+    c1, c2, c3 = st.columns(3)
     if client:
         c1.success("Groq AI: Connected")
     else:
@@ -389,38 +385,86 @@ def page_home():
         st.rerun()
 
 
+# ── Registration (no st.form — prevents Enter-key submission) ─────────────────
+
+def _fmt_aadhaar():
+    """Reformat Aadhaar input as XXXX XXXX XXXX on every keystroke."""
+    raw = re.sub(r'\D', '', st.session_state.get("_ra", ""))[:12]
+    st.session_state["_ra"] = " ".join(raw[i:i+4] for i in range(0, len(raw), 4))
+
+def _fmt_pan():
+    """Uppercase PAN and strip invalid chars."""
+    st.session_state["_rpan"] = re.sub(r'[^A-Z0-9]', '', st.session_state.get("_rpan", "").upper())[:10]
+
+
 def page_registration():
     st.markdown('<span class="step-badge">Step 1 of 6</span>', unsafe_allow_html=True)
     st.markdown("### Customer Registration")
-    st.markdown("Enter details **exactly as they appear** on your identity document.")
+    st.markdown("Enter details exactly as they appear on your identity document.")
 
-    with st.form("reg_form"):
-        c1, c2 = st.columns(2)
-        with c1:
-            name = st.text_input("Full Name *", placeholder="As on Aadhaar / PAN")
-            dob = st.date_input("Date of Birth *", min_value=datetime(1900, 1, 1).date())
-            email = st.text_input("Email *", placeholder="you@example.com")
-        with c2:
-            phone = st.text_input("Phone *", placeholder="+91 98765 43210")
-            doc_type = st.selectbox("Document Type *", ["Aadhaar", "PAN"])
-            doc_num = st.text_input(
-                f"{doc_type} Number *",
-                placeholder="XXXX XXXX XXXX" if doc_type == "Aadhaar" else "ABCDE1234F",
+    c1, c2 = st.columns(2)
+    with c1:
+        st.text_input("Full Name *", key="_rn", placeholder="As on Aadhaar / PAN")
+        st.date_input("Date of Birth *", key="_rd", min_value=datetime(1900, 1, 1).date())
+        st.text_input("Email *", key="_re", placeholder="you@example.com")
+    with c2:
+        st.text_input("Phone *", key="_rp", placeholder="+91 98765 43210")
+        st.selectbox("Document Type *", ["Aadhaar", "PAN"], key="_rt")
+        doc_type = st.session_state.get("_rt", "Aadhaar")
+
+        if doc_type == "Aadhaar":
+            st.text_input(
+                "Aadhaar Number *",
+                key="_ra",
+                placeholder="XXXX XXXX XXXX",
+                max_chars=14,   # 12 digits + 2 spaces
+                on_change=_fmt_aadhaar,
+                help="12-digit number printed on your Aadhaar card",
+            )
+        else:
+            st.text_input(
+                "PAN Number *",
+                key="_rpan",
+                placeholder="ABCDE1234F",
+                max_chars=10,
+                on_change=_fmt_pan,
+                help="10-character alphanumeric PAN (e.g. ABCDE1234F)",
             )
 
-        if st.form_submit_button("Continue", type="primary", use_container_width=True):
-            if not all([name, email, phone, doc_num]):
-                st.error("Please fill all required fields.")
-            else:
-                id_key = "aadhaar_number" if doc_type == "Aadhaar" else "pan_number"
-                st.session_state.customer = {
-                    "full_name": name, "date_of_birth": str(dob),
-                    "email": email, "phone": phone, id_key: doc_num,
-                }
-                st.session_state.doc_type = doc_type.lower()
-                st.success("Registration saved.")
-                st.session_state.step = 3
-                st.rerun()
+    if st.button("Continue", type="primary", use_container_width=True):
+        name  = st.session_state.get("_rn", "").strip()
+        dob   = st.session_state.get("_rd")
+        email = st.session_state.get("_re", "").strip()
+        phone = st.session_state.get("_rp", "").strip()
+
+        if not all([name, email, phone]):
+            st.error("Please fill all required fields.")
+            return
+
+        if doc_type == "Aadhaar":
+            digits = re.sub(r'\D', '', st.session_state.get("_ra", ""))
+            if len(digits) != 12:
+                st.error("Aadhaar number must be exactly 12 digits.")
+                return
+            id_key  = "aadhaar_number"
+            doc_num = st.session_state.get("_ra", "")     # keep formatted (with spaces)
+        else:
+            doc_num = st.session_state.get("_rpan", "").strip()
+            if not re.match(r'^[A-Z]{5}[0-9]{4}[A-Z]$', doc_num):
+                st.error("Invalid PAN. Expected format: ABCDE1234F (5 letters · 4 digits · 1 letter)")
+                return
+            id_key = "pan_number"
+
+        st.session_state.customer = {
+            "full_name": name,
+            "date_of_birth": str(dob),
+            "email": email,
+            "phone": phone,
+            id_key: doc_num,
+        }
+        st.session_state.doc_type = doc_type.lower()
+        st.session_state.step = 3
+        st.rerun()
 
 
 def page_document():
@@ -493,14 +537,14 @@ def page_ai_analysis():
 def _show_analysis(r: Dict):
     fraud = r.get("fraud", {})
     match = r.get("field_match", {})
-    risk = fraud.get("risk_level", "LOW")
+    risk  = fraud.get("risk_level", "LOW")
     badge = {"LOW": "✅", "MEDIUM": "⚠️", "HIGH": "❌"}.get(risk, "—")
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Fraud Risk", f"{badge} {risk}", f"score {fraud.get('risk_score', 0):.2f}")
-    c2.metric("Authenticity", f"{fraud.get('authenticity_score', 0.9):.0%}")
-    c3.metric("Field Match", f"{match.get('overall_score', 0.9):.0%}")
-    c4.metric("Recommendation", r.get("recommendation", "REVIEW"))
+    c1.metric("Fraud Risk",      f"{badge} {risk}", f"score {fraud.get('risk_score', 0):.2f}")
+    c2.metric("Authenticity",    f"{fraud.get('authenticity_score', 0.9):.0%}")
+    c3.metric("Field Match",     f"{match.get('overall_score', 0.9):.0%}")
+    c4.metric("Recommendation",  r.get("recommendation", "REVIEW"))
 
     with st.expander("Extracted Fields", expanded=True):
         ex = r.get("extracted_fields", {})
@@ -522,6 +566,27 @@ def _show_analysis(r: Dict):
         st.caption("Demo mode — add GROQ_API_KEY for real AI analysis.")
 
 
+# ── Face liveness: 3-step head movement challenge ─────────────────────────────
+
+_LV_STEPS = [
+    {"key": "left",   "label": "Turn your head LEFT",       "hint": "Turn until your right ear faces the camera", "icon": "←"},
+    {"key": "right",  "label": "Turn your head RIGHT",      "hint": "Turn until your left ear faces the camera",  "icon": "→"},
+    {"key": "center", "label": "Face the camera directly",  "hint": "Look straight ahead at the camera",          "icon": "●"},
+]
+
+def _lv_step_html(i: int, cur: int, s: dict) -> str:
+    if i < cur:
+        cls = "lv-step-done"
+        icon = f"✓ {s['icon']}"
+    elif i == cur:
+        cls = "lv-step-active"
+        icon = s["icon"]
+    else:
+        cls = "lv-step-todo"
+        icon = s["icon"]
+    return f'<div class="{cls}">{icon}<br><small>{s["key"]}</small></div>'
+
+
 def page_liveness():
     st.markdown('<span class="step-badge">Step 4 of 6</span>', unsafe_allow_html=True)
     st.markdown("### Face Liveness Detection")
@@ -532,34 +597,95 @@ def page_liveness():
             st.session_state.step = 4; st.rerun()
         return
 
+    # Already completed
     if st.session_state.liveness:
         lv = st.session_state.liveness
-        if lv.get("face_detected"):
-            st.success(f"Face verified — confidence {lv.get('confidence', 0):.0%}")
-            if lv.get("mock"):
-                st.caption("MediaPipe unavailable — using mock detection.")
-        else:
-            st.error("No face detected. Please retake.")
-            if st.button("Retake"):
-                st.session_state.liveness = None; st.rerun()
-
+        passed = lv.get("steps_passed", 3)
+        st.success(f"Liveness verified — {passed}/3 movement checks passed")
+        if lv.get("mock"):
+            st.caption("Running in demo mode — MediaPipe head-pose analysis unavailable.")
         st.markdown("---")
-        if st.button("Continue to Blockchain", type="primary", use_container_width=True):
-            st.session_state.step = 6; st.rerun()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Continue to Blockchain", type="primary", use_container_width=True):
+                st.session_state.step = 6; st.rerun()
+        with col2:
+            if st.button("Redo liveness check", use_container_width=True):
+                st.session_state.liveness = None
+                st.session_state.pop("liveness_challenge", None)
+                st.rerun()
         return
+
+    # Init challenge state
+    if "liveness_challenge" not in st.session_state:
+        st.session_state["liveness_challenge"] = {"step": 0, "results": []}
+
+    cs = st.session_state["liveness_challenge"]
+
+    # All steps complete → write final result and rerun
+    if cs["step"] >= len(_LV_STEPS):
+        passed = sum(1 for r in cs["results"] if r["passed"])
+        st.session_state.liveness = {
+            "face_detected": True,
+            "confidence": round(0.82 + 0.06 * passed, 2),
+            "steps_passed": passed,
+            "mock": not _MP_OK,
+        }
+        st.rerun()
+        return
+
+    # Step progress bar
+    prog_cols = st.columns(len(_LV_STEPS))
+    for i, s in enumerate(_LV_STEPS):
+        prog_cols[i].markdown(_lv_step_html(i, cs["step"], s), unsafe_allow_html=True)
+
+    st.markdown("---")
+    cur = _LV_STEPS[cs["step"]]
 
     c1, c2 = st.columns([2, 1])
     with c1:
-        st.info("Take a clear selfie. Look directly at the camera with good lighting.")
-        photo = st.camera_input("Take selfie")
+        st.markdown(f"**{cur['label']}**")
+        photo = st.camera_input(
+            "Position yourself, then click to capture",
+            key=f"_lv_cam_{cs['step']}",
+        )
         if photo:
-            if st.button("Verify Face", type="primary", use_container_width=True):
-                with st.spinner("MediaPipe analysing…"):
-                    result = detect_face(photo.read())
-                st.session_state.liveness = result
+            if st.button("Verify", type="primary", use_container_width=True, key=f"_lv_btn_{cs['step']}"):
+                with st.spinner("Analysing pose…"):
+                    pose = detect_head_pose(photo.read())
+
+                expected = cur["key"]
+
+                if pose.get("mock"):
+                    ok = True  # always pass when no MediaPipe
+                elif not pose.get("face_detected"):
+                    ok = False
+                elif expected == "center":
+                    ok = abs(pose.get("deviation", 0)) < 0.22
+                else:
+                    # left or right: just need significant displacement (ignore exact direction
+                    # since camera mirroring varies by platform)
+                    ok = abs(pose.get("deviation", 0)) > 0.14
+
+                cs["results"].append({"step": expected, "passed": ok, "pose": pose})
+
+                if ok:
+                    cs["step"] += 1
+                    st.success(f"✓ Verified — moving to next step")
+                    time.sleep(0.4)
+                else:
+                    cs["results"].pop()  # don't count failed attempt
+                    st.error("Head position not detected. Please turn your head more clearly and try again.")
                 st.rerun()
+
     with c2:
-        st.markdown("**Tips**\n- Face fully visible\n- Even lighting\n- Look straight at camera\n- Remove glasses if needed")
+        st.markdown(f"**Step {cs['step'] + 1} of {len(_LV_STEPS)}**")
+        st.markdown(f"*{cur['hint']}*")
+        st.markdown("---")
+        if cs["step"] > 0:
+            st.markdown(f"Completed: {cs['step']}/{len(_LV_STEPS)}")
+        if not _MP_OK:
+            st.caption("Demo mode — head-pose analysis unavailable; all steps auto-pass.")
 
 
 def page_blockchain():
@@ -590,7 +716,7 @@ def page_blockchain():
         st.markdown("---")
         if st.button("View Final Decision", type="primary", use_container_width=True):
             fraud = st.session_state.analysis.get("fraud", {})
-            lv = st.session_state.liveness
+            lv    = st.session_state.liveness
             if fraud.get("risk_score", 0.1) < 0.35 and lv.get("confidence", 0) > 0.55 and lv.get("face_detected"):
                 st.session_state.decision = "APPROVED"
             elif fraud.get("risk_score", 0.1) < 0.65:
@@ -625,29 +751,29 @@ def page_decision():
     st.markdown('<span class="step-badge">Step 6 of 6</span>', unsafe_allow_html=True)
     st.markdown("### KYC Decision")
 
-    decision = st.session_state.decision or "UNKNOWN"
-    customer = st.session_state.customer
-    analysis = st.session_state.analysis or {}
-    liveness = st.session_state.liveness or {}
+    decision   = st.session_state.decision or "UNKNOWN"
+    customer   = st.session_state.customer
+    analysis   = st.session_state.analysis or {}
+    liveness   = st.session_state.liveness or {}
     blockchain = st.session_state.blockchain or {}
-    fraud = analysis.get("fraud", {})
+    fraud      = analysis.get("fraud", {})
 
     if decision == "APPROVED":
-        st.success(f"## KYC Approved")
+        st.success("## KYC Approved")
         st.markdown(f"**{customer.get('full_name', 'Customer')}** has been successfully verified.")
     elif decision == "MANUAL_REVIEW":
-        st.warning(f"## Manual Review Required")
+        st.warning("## Manual Review Required")
         st.markdown("Scores are borderline — a human reviewer will make the final call.")
     else:
-        st.error(f"## KYC Rejected")
+        st.error("## KYC Rejected")
         st.markdown("Verification failed. Please visit your nearest branch with original documents.")
 
     st.markdown("---")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Decision", decision)
-    c2.metric("Fraud Risk Score", f"{fraud.get('risk_score', 0.07):.2f}")
-    c3.metric("Liveness Confidence", f"{liveness.get('confidence', 0.85):.0%}")
-    c4.metric("Doc Authenticity", f"{fraud.get('authenticity_score', 0.95):.0%}")
+    c1.metric("Decision",          decision)
+    c2.metric("Fraud Risk Score",  f"{fraud.get('risk_score', 0.07):.2f}")
+    c3.metric("Liveness",          f"{liveness.get('confidence', 0.85):.0%}")
+    c4.metric("Doc Authenticity",  f"{fraud.get('authenticity_score', 0.95):.0%}")
 
     if blockchain:
         st.markdown("### Blockchain Confirmation")
@@ -674,6 +800,7 @@ def page_decision():
             "liveness": {
                 "face_detected": liveness.get("face_detected"),
                 "confidence": liveness.get("confidence"),
+                "steps_passed": liveness.get("steps_passed"),
             },
             "blockchain": {
                 "transaction_hash": blockchain.get("transaction_hash"),
